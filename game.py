@@ -1,9 +1,11 @@
 """Zentrale Spielklasse — Schleife, Spawning, Kollisionen und UI."""
 
+import random
+
 import pygame
 
 import settings
-from enemy import Enemy
+from enemy import ENEMY_TYPES
 from player import Player
 from starfield import Starfield
 
@@ -41,9 +43,10 @@ class Game:
         self._spawn_enemies()
 
     def _spawn_enemies(self) -> None:
-        """Neue Gegner-Welle am oberen Bildschirmrand erzeugen."""
+        """Neue Gegner-Welle mit zufällig gemischten Typen spawnen."""
         for _ in range(settings.ENEMIES_PER_WAVE):
-            enemy = Enemy.spawn_at_top()
+            enemy_cls = random.choice(ENEMY_TYPES)
+            enemy = enemy_cls.spawn_at_top()
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
@@ -106,11 +109,11 @@ class Game:
         self.bullets.update()
         self.enemies.update()
 
-        # Gegner schießen lassen (jeder mit eigenem Cooldown)
+        # Gegner schießen lassen (jeder Typ mit eigenem Verhalten)
         for enemy in self.enemies:
-            laser = enemy.try_shoot(self.enemy_lasers)
-            if laser is not None:
-                self.all_sprites.add(laser)
+            projectiles = enemy.try_shoot(self.enemy_lasers, self.player)
+            for projectile in projectiles:
+                self.all_sprites.add(projectile)
 
         self.enemy_lasers.update()
 

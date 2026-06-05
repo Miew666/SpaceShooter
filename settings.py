@@ -14,7 +14,33 @@ COLOR_PLAYER_ACCENT = (200, 230, 255)
 COLOR_ENEMY = (220, 50, 50)
 COLOR_ENEMY_ACCENT = (255, 120, 120)
 COLOR_BULLET = (255, 255, 80)
-COLOR_ENEMY_LASER = (255, 100, 40)  # Orange — optisch von Spieler-Schüssen unterscheidbar
+
+# Gegner-Projektile — Grunt (rot, geradeaus)
+COLOR_GRUNT_LASER = (220, 50, 50)
+GRUNT_LASER_SPEED = 6
+GRUNT_LASER_WIDTH = 5
+GRUNT_LASER_HEIGHT = 14
+GRUNT_SHOOT_MS = 2000
+
+# Sniper (gelb, gezielt, schnell)
+COLOR_SNIPER_BEAM = (255, 255, 80)
+SNIPER_BEAM_SPEED = 9
+SNIPER_BEAM_WIDTH = 3
+SNIPER_BEAM_HEIGHT = 18
+SNIPER_SHOOT_MS = 4000
+
+# Scatter (violett, Fächer, langsam)
+COLOR_SCATTER_ORB = (120, 80, 255)
+SCATTER_ORB_SPEED = 4
+SCATTER_ORB_SIZE = 10
+SCATTER_FAN_ANGLE = 22  # Grad links/rechts vom Mittelstrahl
+SCATTER_SHOOT_MS = 3000
+
+# Gegner-Farben (Schiff-Grafik)
+COLOR_SNIPER = (50, 200, 80)
+COLOR_SNIPER_ACCENT = (150, 255, 150)
+COLOR_SCATTER = (100, 60, 200)
+COLOR_SCATTER_ACCENT = (180, 140, 255)
 
 # Spieler
 PLAYER_SPEED = 5
@@ -28,13 +54,6 @@ BULLET_SPEED = 10
 BULLET_WIDTH = 4
 BULLET_HEIGHT = 12
 BULLET_COOLDOWN = 250  # Mindestabstand zwischen Schüssen (Millisekunden)
-
-# Gegner-Projektile
-ENEMY_LASER_SPEED = 6
-ENEMY_LASER_WIDTH = 5
-ENEMY_LASER_HEIGHT = 14
-ENEMY_SHOOT_MIN_MS = 1500  # Mindest-Cooldown pro Gegner
-ENEMY_SHOOT_MAX_MS = 3000  # Maximal-Cooldown pro Gegner
 
 # Gegner
 ENEMY_SPEED = 2

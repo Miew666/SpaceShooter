@@ -5,19 +5,19 @@ import random
 import pygame
 
 import settings
+from assets import Assets
 from enemy_projectile import GruntLaser, ScatterOrb, SniperBeam
 
 
 class Enemy(pygame.sprite.Sprite):
     """Basisklasse für alle Gegner — Bewegung, Respawn und Schuss-Cooldown."""
 
-    # In Unterklassen überschreiben
     shoot_interval_ms: int = 2000
     shoot_jitter_ms: int = 0
 
-    def __init__(self, x: int, y: int):
+    def __init__(self, x: int, y: int, ship_sprite: pygame.Surface):
         super().__init__()
-        self.image = self._create_image()
+        self.image = ship_sprite.copy()
         self.rect = self.image.get_rect(topleft=(x, y))
         self._next_shot_at = pygame.time.get_ticks() + self._random_shoot_delay()
 
@@ -25,10 +25,6 @@ class Enemy(pygame.sprite.Sprite):
         """Schuss-Intervall mit optionalem Zufalls-Jitter."""
         jitter = random.randint(-self.shoot_jitter_ms, self.shoot_jitter_ms)
         return max(500, self.shoot_interval_ms + jitter)
-
-    def _create_image(self) -> pygame.Surface:
-        """Grafik erzeugen — in Unterklassen überschreiben."""
-        raise NotImplementedError
 
     @classmethod
     def spawn_at_top(cls) -> "Enemy":
@@ -70,18 +66,8 @@ class GruntEnemy(Enemy):
     shoot_interval_ms = settings.GRUNT_SHOOT_MS
     shoot_jitter_ms = 200
 
-    def _create_image(self) -> pygame.Surface:
-        surface = pygame.Surface(
-            (settings.ENEMY_WIDTH, settings.ENEMY_HEIGHT), pygame.SRCALPHA
-        )
-        points = [
-            (settings.ENEMY_WIDTH // 2, settings.ENEMY_HEIGHT),
-            (0, 0),
-            (settings.ENEMY_WIDTH, 0),
-        ]
-        pygame.draw.polygon(surface, settings.COLOR_ENEMY, points)
-        pygame.draw.polygon(surface, settings.COLOR_ENEMY_ACCENT, points, 2)
-        return surface
+    def __init__(self, x: int, y: int):
+        super().__init__(x, y, Assets.enemy_grunt)
 
     def _create_projectiles(self, player: pygame.sprite.Sprite) -> list:
         laser = GruntLaser.from_enemy(self.rect.centerx, self.rect.bottom)
@@ -94,16 +80,8 @@ class SniperEnemy(Enemy):
     shoot_interval_ms = settings.SNIPER_SHOOT_MS
     shoot_jitter_ms = 300
 
-    def _create_image(self) -> pygame.Surface:
-        surface = pygame.Surface(
-            (settings.ENEMY_WIDTH, settings.ENEMY_HEIGHT), pygame.SRCALPHA
-        )
-        # Schmale grüne Raute
-        cx, cy = settings.ENEMY_WIDTH // 2, settings.ENEMY_HEIGHT // 2
-        points = [(cx, 0), (settings.ENEMY_WIDTH, cy), (cx, settings.ENEMY_HEIGHT), (0, cy)]
-        pygame.draw.polygon(surface, settings.COLOR_SNIPER, points)
-        pygame.draw.polygon(surface, settings.COLOR_SNIPER_ACCENT, points, 2)
-        return surface
+    def __init__(self, x: int, y: int):
+        super().__init__(x, y, Assets.enemy_sniper)
 
     def _create_projectiles(self, player: pygame.sprite.Sprite) -> list:
         beam = SniperBeam.toward_player(
@@ -121,16 +99,8 @@ class ScatterEnemy(Enemy):
     shoot_interval_ms = settings.SCATTER_SHOOT_MS
     shoot_jitter_ms = 400
 
-    def _create_image(self) -> pygame.Surface:
-        surface = pygame.Surface(
-            (settings.ENEMY_WIDTH, settings.ENEMY_HEIGHT), pygame.SRCALPHA
-        )
-        w, h = settings.ENEMY_WIDTH, settings.ENEMY_HEIGHT
-        # Breiteres lila Schiff (breiteres Dreieck)
-        points = [(w // 2, h), (0, h // 3), (w, h // 3)]
-        pygame.draw.polygon(surface, settings.COLOR_SCATTER, points)
-        pygame.draw.polygon(surface, settings.COLOR_SCATTER_ACCENT, points, 2)
-        return surface
+    def __init__(self, x: int, y: int):
+        super().__init__(x, y, Assets.enemy_scatter)
 
     def _create_projectiles(self, player: pygame.sprite.Sprite) -> list:
         origin_x = self.rect.centerx
@@ -143,5 +113,4 @@ class ScatterEnemy(Enemy):
         return [ScatterOrb.with_angle(origin_x, origin_y, angle) for angle in angles]
 
 
-# Alle spawnbaren Gegnertypen — in game.py für zufälliges Spawning nutzen
 ENEMY_TYPES = [GruntEnemy, SniperEnemy, ScatterEnemy]

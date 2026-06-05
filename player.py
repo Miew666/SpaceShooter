@@ -3,6 +3,7 @@
 import pygame
 
 import settings
+from assets import Assets
 from bullet import Bullet
 
 
@@ -11,7 +12,7 @@ class Player(pygame.sprite.Sprite):
 
     def __init__(self):
         super().__init__()
-        self.image = self._create_image()
+        self.image = Assets.player_ship.copy()
         self.rect = self.image.get_rect(
             midbottom=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT - 20)
         )
@@ -20,20 +21,6 @@ class Player(pygame.sprite.Sprite):
         self.invincible_until = 0
         self._blink_visible = True
         self._blink_timer = 0
-
-    def _create_image(self) -> pygame.Surface:
-        """Grafik erzeugen — später durch pygame.image.load(...) ersetzen."""
-        surface = pygame.Surface(
-            (settings.PLAYER_WIDTH, settings.PLAYER_HEIGHT), pygame.SRCALPHA
-        )
-        points = [
-            (settings.PLAYER_WIDTH // 2, 0),
-            (0, settings.PLAYER_HEIGHT),
-            (settings.PLAYER_WIDTH, settings.PLAYER_HEIGHT),
-        ]
-        pygame.draw.polygon(surface, settings.COLOR_PLAYER, points)
-        pygame.draw.polygon(surface, settings.COLOR_PLAYER_ACCENT, points, 2)
-        return surface
 
     @property
     def is_invincible(self) -> bool:

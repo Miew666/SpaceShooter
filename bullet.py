@@ -5,6 +5,7 @@ import math
 import pygame
 
 import settings
+from assets import Assets
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -19,33 +20,20 @@ class Bullet(pygame.sprite.Sprite):
     ):
         super().__init__()
         self.plasma = plasma
-        self.image = self._create_image(plasma)
-        self.rect = self.image.get_rect(midbottom=(x, y))
 
         speed = settings.PLASMA_SPEED if plasma else settings.BULLET_SPEED
         rad = math.radians(angle_deg)
         self.vx = speed * math.sin(rad)
         self.vy = -speed * math.cos(rad)
 
-    def _create_image(self, plasma: bool) -> pygame.Surface:
-        """Grafik erzeugen — später durch pygame.image.load(...) ersetzen."""
         if plasma:
-            w, h = settings.PLASMA_WIDTH, settings.PLASMA_HEIGHT
-            color = settings.COLOR_PLASMA
+            self.image = Assets.player_plasma.copy()
+        elif angle_deg == 0:
+            self.image = Assets.player_laser.copy()
         else:
-            w, h = settings.BULLET_WIDTH, settings.BULLET_HEIGHT
-            color = settings.COLOR_BULLET
+            self.image = Assets.rotated_player_laser(self.vx, self.vy)
 
-        surface = pygame.Surface((w, h), pygame.SRCALPHA)
-        pygame.draw.rect(surface, color, (0, 0, w, h), border_radius=3 if plasma else 2)
-        if plasma:
-            pygame.draw.rect(
-                surface,
-                settings.COLOR_PLASMA_CORE,
-                (w // 4, 0, w // 2, h),
-                border_radius=2,
-            )
-        return surface
+        self.rect = self.image.get_rect(midbottom=(x, y))
 
     @classmethod
     def with_angle(cls, x: int, y: int, angle_deg: float) -> "Bullet":

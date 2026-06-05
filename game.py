@@ -5,6 +5,7 @@ import random
 import pygame
 
 import settings
+from assets import Assets
 from enemy import ENEMY_TYPES
 from player import Player
 from powerup import PowerUp
@@ -20,6 +21,7 @@ class Game:
             (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
         )
         pygame.display.set_caption("Space Shooter")
+        Assets.load()
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 28)
         self.font_large = pygame.font.SysFont(None, 48)

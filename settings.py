@@ -14,6 +14,7 @@ COLOR_PLAYER_ACCENT = (200, 230, 255)
 COLOR_ENEMY = (220, 50, 50)
 COLOR_ENEMY_ACCENT = (255, 120, 120)
 COLOR_BULLET = (255, 255, 80)
+COLOR_ENEMY_LASER = (255, 100, 40)  # Orange — optisch von Spieler-Schüssen unterscheidbar
 
 # Spieler
 PLAYER_SPEED = 5
@@ -27,6 +28,13 @@ BULLET_SPEED = 10
 BULLET_WIDTH = 4
 BULLET_HEIGHT = 12
 BULLET_COOLDOWN = 250  # Mindestabstand zwischen Schüssen (Millisekunden)
+
+# Gegner-Projektile
+ENEMY_LASER_SPEED = 6
+ENEMY_LASER_WIDTH = 5
+ENEMY_LASER_HEIGHT = 14
+ENEMY_SHOOT_MIN_MS = 1500  # Mindest-Cooldown pro Gegner
+ENEMY_SHOOT_MAX_MS = 3000  # Maximal-Cooldown pro Gegner
 
 # Gegner
 ENEMY_SPEED = 2

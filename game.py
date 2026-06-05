@@ -28,6 +28,7 @@ class Game:
         """Spielzustand für Neustart zurücksetzen."""
         self.player = Player()
         self.bullets = pygame.sprite.Group()
+        self.enemy_lasers = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.all_sprites = pygame.sprite.Group()
 
@@ -56,6 +57,13 @@ class Game:
                     self._reset_state()
         return True
 
+    def _damage_player(self) -> None:
+        """Spieler nimmt Schaden — Leben reduzieren, kurze Unverwundbarkeit."""
+        self.lives -= 1
+        self.player.make_invincible()
+        if self.lives <= 0:
+            self.game_over = True
+
     def _handle_collisions(self) -> None:
         """Kollisionen zwischen Projektilen, Gegnern und Spieler prüfen."""
         # Projektil trifft Gegner — beide zerstören, Score erhöhen
@@ -64,20 +72,23 @@ class Game:
         )
         self.score += len(hits) * settings.SCORE_PER_HIT
 
-        # Gegner rammt Spieler — Leben verlieren (wenn nicht unverwundbar)
         if not self.player.is_invincible:
+            # Gegner rammt Spieler
             colliding = pygame.sprite.spritecollide(
                 self.player, self.enemies, False
             )
             if colliding:
-                self.lives -= 1
-                self.player.make_invincible()
-                # Getroffene Gegner entfernen, damit kein sofortiger Re-Ram
+                self._damage_player()
                 for enemy in colliding:
                     enemy.kill()
 
-                if self.lives <= 0:
-                    self.game_over = True
+        if not self.player.is_invincible:
+            # Gegner-Schuss trifft Spieler — Schuss zerstören, Spieler nimmt Schaden
+            laser_hits = pygame.sprite.spritecollide(
+                self.player, self.enemy_lasers, True
+            )
+            if laser_hits:
+                self._damage_player()
 
     def _update(self) -> None:
         """Spielzustand pro Frame aktualisieren."""
@@ -94,6 +105,14 @@ class Game:
 
         self.bullets.update()
         self.enemies.update()
+
+        # Gegner schießen lassen (jeder mit eigenem Cooldown)
+        for enemy in self.enemies:
+            laser = enemy.try_shoot(self.enemy_lasers)
+            if laser is not None:
+                self.all_sprites.add(laser)
+
+        self.enemy_lasers.update()
 
         # Spawn-Timer für neue Gegner-Wellen
         now = pygame.time.get_ticks()

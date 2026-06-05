@@ -53,7 +53,27 @@ INVINCIBILITY_MS = 1500  # Unverwundbarkeit nach Treffer (Millisekunden)
 BULLET_SPEED = 10
 BULLET_WIDTH = 4
 BULLET_HEIGHT = 12
-BULLET_COOLDOWN = 250  # Mindestabstand zwischen Schüssen (Millisekunden)
+BULLET_COOLDOWN = 250  # Stufe 1–3: Mindestabstand zwischen Schüssen (ms)
+BULLET_COOLDOWN_L4 = 150  # Stufe 4: schnellere Feuerrate
+BULLET_COOLDOWN_L5 = 120  # Stufe 5: ultimative Feuerrate
+DUAL_SHOT_OFFSET = 14  # Abstand der beiden Strahlen bei Stufe 2
+FAN_ANGLE_L3 = 12  # Fächer-Winkel für Stufe 3 und 4 (Grad)
+
+# Plasmastrahl (Laser-Stufe 5)
+PLASMA_WIDTH = 22
+PLASMA_HEIGHT = 28
+PLASMA_SPEED = 12
+COLOR_PLASMA = (80, 200, 255)
+COLOR_PLASMA_CORE = (200, 255, 255)
+
+# Laser-Stufen & Power-Ups
+MAX_LASER_LEVEL = 5
+LASER_HIT_INVINCIBILITY_MS = 1000  # Unverwundbarkeit nach Laser-Stufen-Verlust
+POWERUP_DROP_CHANCE = 0.2  # 20 % Chance bei zerstörtem Gegner
+POWERUP_SPEED = 2
+POWERUP_SIZE = 20
+COLOR_POWERUP = (50, 220, 80)
+COLOR_POWERUP_GLOW = (150, 255, 150)
 
 # Gegner
 ENEMY_SPEED = 2

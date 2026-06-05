@@ -15,6 +15,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(
             midbottom=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT - 20)
         )
+        self.laser_level = 1
         self._last_shot = 0
         self.invincible_until = 0
         self._blink_visible = True
@@ -25,7 +26,6 @@ class Player(pygame.sprite.Sprite):
         surface = pygame.Surface(
             (settings.PLAYER_WIDTH, settings.PLAYER_HEIGHT), pygame.SRCALPHA
         )
-        # Dreieck (Spitze nach oben)
         points = [
             (settings.PLAYER_WIDTH // 2, 0),
             (0, settings.PLAYER_HEIGHT),
@@ -40,9 +40,49 @@ class Player(pygame.sprite.Sprite):
         """True, wenn der Spieler gerade unverwundbar ist."""
         return pygame.time.get_ticks() < self.invincible_until
 
-    def make_invincible(self) -> None:
+    def make_invincible(self, duration_ms: int | None = None) -> None:
         """Kurze Unverwundbarkeit nach Treffer aktivieren."""
-        self.invincible_until = pygame.time.get_ticks() + settings.INVINCIBILITY_MS
+        ms = duration_ms if duration_ms is not None else settings.INVINCIBILITY_MS
+        self.invincible_until = pygame.time.get_ticks() + ms
+
+    def upgrade_laser(self) -> None:
+        """Laser-Stufe um 1 erhöhen (maximal Stufe 5)."""
+        self.laser_level = min(settings.MAX_LASER_LEVEL, self.laser_level + 1)
+
+    def downgrade_laser(self) -> None:
+        """Laser-Stufe um 1 senken (minimal Stufe 1)."""
+        self.laser_level = max(1, self.laser_level - 1)
+
+    def _get_shoot_cooldown(self) -> int:
+        """Feuerrate abhängig von der Laser-Stufe."""
+        if self.laser_level >= 5:
+            return settings.BULLET_COOLDOWN_L5
+        if self.laser_level >= 4:
+            return settings.BULLET_COOLDOWN_L4
+        return settings.BULLET_COOLDOWN
+
+    def _create_bullets_for_level(self) -> list[Bullet]:
+        """Projektile gemäß aktueller Laser-Stufe erzeugen."""
+        cx = self.rect.centerx
+        top = self.rect.top
+
+        if self.laser_level == 1:
+            return [Bullet(cx, top)]
+
+        if self.laser_level == 2:
+            offset = settings.DUAL_SHOT_OFFSET
+            return [Bullet(cx - offset, top), Bullet(cx + offset, top)]
+
+        if self.laser_level in (3, 4):
+            angles = (
+                -settings.FAN_ANGLE_L3,
+                0,
+                settings.FAN_ANGLE_L3,
+            )
+            return [Bullet.with_angle(cx, top, angle) for angle in angles]
+
+        # Stufe 5: breiter Plasmastrahl
+        return [Bullet.plasma_beam(cx, top)]
 
     def update(self, keys: pygame.key.ScancodeWrapper) -> None:
         """Bewegung per Pfeiltasten; Position an Bildschirmränder clampen."""
@@ -60,7 +100,6 @@ class Player(pygame.sprite.Sprite):
         self.rect.top = max(0, self.rect.top)
         self.rect.bottom = min(settings.SCREEN_HEIGHT, self.rect.bottom)
 
-        # Blinken während Unverwundbarkeit
         if self.is_invincible:
             self._blink_timer += 1
             if self._blink_timer >= 5:
@@ -69,15 +108,17 @@ class Player(pygame.sprite.Sprite):
         else:
             self._blink_visible = True
 
-    def shoot(self, bullet_group: pygame.sprite.Group) -> Bullet | None:
-        """Projektil erzeugen, wenn Cooldown abgelaufen ist."""
+    def shoot(self, bullet_group: pygame.sprite.Group) -> list[Bullet]:
+        """Projektile erzeugen, wenn Cooldown abgelaufen ist."""
         now = pygame.time.get_ticks()
-        if now - self._last_shot >= settings.BULLET_COOLDOWN:
-            bullet = Bullet(self.rect.centerx, self.rect.top)
+        if now - self._last_shot < self._get_shoot_cooldown():
+            return []
+
+        bullets = self._create_bullets_for_level()
+        for bullet in bullets:
             bullet_group.add(bullet)
-            self._last_shot = now
-            return bullet
-        return None
+        self._last_shot = now
+        return bullets
 
     def draw(self, surface: pygame.Surface) -> None:
         """Spieler zeichnen (mit Blink-Effekt bei Unverwundbarkeit)."""

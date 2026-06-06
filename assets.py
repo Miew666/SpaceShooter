@@ -60,8 +60,13 @@ class Assets:
     sniper_beam: pygame.Surface
     scatter_orb: pygame.Surface
 
-    # Power-Up
+    # Power-Ups
     powerup_laser: pygame.Surface
+    powerup_drone: pygame.Surface
+
+    # Drohnen
+    drone_ship: pygame.Surface
+    drone_laser: pygame.Surface
 
     @classmethod
     def load(cls) -> None:
@@ -130,6 +135,22 @@ class Assets:
         powerup_size = (settings.POWERUP_SIZE, settings.POWERUP_SIZE)
         cls.powerup_laser = _load_sprite(
             "Power-ups/powerupGreen_bolt.png", powerup_size, settings.COLOR_POWERUP
+        )
+
+        # Drohnen-Power-Up (gelbes Stern-Symbol)
+        cls.powerup_drone = _load_sprite(
+            "Power-ups/powerupYellow_star.png", powerup_size, settings.COLOR_DRONE
+        )
+
+        # Mini-Drohne (kleines UFO)
+        drone_size = (settings.DRONE_WIDTH, settings.DRONE_HEIGHT)
+        cls.drone_ship = _load_sprite("ufoBlue.png", drone_size, settings.COLOR_DRONE)
+
+        # Drohnen-Laser (kleiner blauer Strahl)
+        cls.drone_laser = _load_sprite(
+            "Lasers/laserBlue01.png",
+            (settings.DRONE_BULLET_WIDTH, settings.DRONE_BULLET_HEIGHT),
+            settings.COLOR_BULLET,
         )
 
         cls._loaded = True

@@ -20,6 +20,7 @@ class Bullet(pygame.sprite.Sprite):
     ):
         super().__init__()
         self.plasma = plasma
+        self.weak = False
 
         speed = settings.PLASMA_SPEED if plasma else settings.BULLET_SPEED
         rad = math.radians(angle_deg)
@@ -44,6 +45,19 @@ class Bullet(pygame.sprite.Sprite):
     def plasma_beam(cls, x: int, y: int) -> "Bullet":
         """Breiter Plasmastrahl für Laser-Stufe 5."""
         return cls(x, y, plasma=True)
+
+    @classmethod
+    def weak(cls, x: int, y: int) -> "Bullet":
+        """Kleiner, schwächerer Laser für Drohnen."""
+        bullet = cls.__new__(cls)
+        pygame.sprite.Sprite.__init__(bullet)
+        bullet.plasma = False
+        bullet.weak = True
+        bullet.vx = 0.0
+        bullet.vy = -settings.DRONE_BULLET_SPEED
+        bullet.image = Assets.drone_laser.copy()
+        bullet.rect = bullet.image.get_rect(midbottom=(x, y))
+        return bullet
 
     def update(self) -> None:
         """Projektil bewegen; außerhalb des Bildschirms entfernen."""

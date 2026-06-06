@@ -5,6 +5,7 @@ import pygame
 import settings
 from assets import Assets
 from bullet import Bullet
+from drone import Drone
 
 
 class Player(pygame.sprite.Sprite):
@@ -17,6 +18,7 @@ class Player(pygame.sprite.Sprite):
             midbottom=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT - 20)
         )
         self.laser_level = 1
+        self.drones: list[Drone] = []
         self._last_shot = 0
         self.invincible_until = 0
         self._blink_visible = True
@@ -39,6 +41,19 @@ class Player(pygame.sprite.Sprite):
     def downgrade_laser(self) -> None:
         """Laser-Stufe um 1 senken (minimal Stufe 1)."""
         self.laser_level = max(1, self.laser_level - 1)
+
+    def add_drone(self) -> Drone | None:
+        """Neue Drohne spawnen, bis maximal zwei Begleiter."""
+        if len(self.drones) >= settings.MAX_DRONES:
+            return None
+        drone = Drone(self, len(self.drones))
+        self.drones.append(drone)
+        return drone
+
+    def update_drones(self) -> None:
+        """Alle aktiven Drohnen der Spielerbewegung folgen lassen."""
+        for drone in self.drones:
+            drone.update()
 
     def _get_shoot_cooldown(self) -> int:
         """Feuerrate abhängig von der Laser-Stufe."""
@@ -95,8 +110,10 @@ class Player(pygame.sprite.Sprite):
         else:
             self._blink_visible = True
 
+        self.update_drones()
+
     def shoot(self, bullet_group: pygame.sprite.Group) -> list[Bullet]:
-        """Projektile erzeugen, wenn Cooldown abgelaufen ist."""
+        """Projektile erzeugen; Drohnen feuern mit, wenn der Spieler schießt."""
         now = pygame.time.get_ticks()
         if now - self._last_shot < self._get_shoot_cooldown():
             return []
@@ -104,10 +121,18 @@ class Player(pygame.sprite.Sprite):
         bullets = self._create_bullets_for_level()
         for bullet in bullets:
             bullet_group.add(bullet)
+
+        for drone in self.drones:
+            drone_bullet = drone.shoot(bullet_group)
+            if drone_bullet is not None:
+                bullets.append(drone_bullet)
+
         self._last_shot = now
         return bullets
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Spieler zeichnen (mit Blink-Effekt bei Unverwundbarkeit)."""
+        """Drohnen und Spieler zeichnen (Blink-Effekt nur für den Spieler)."""
+        for drone in self.drones:
+            surface.blit(drone.image, drone.rect)
         if self._blink_visible:
             surface.blit(self.image, self.rect)

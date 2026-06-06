@@ -8,7 +8,7 @@ import settings
 from assets import Assets
 from enemy import ENEMY_TYPES
 from player import Player
-from powerup import PowerUp
+from powerup import PowerUp, PowerUpType
 from starfield import Starfield
 
 
@@ -81,26 +81,39 @@ class Game:
 
     def _try_drop_powerup(self, x: int, y: int) -> None:
         """Mit 20 % Chance ein Power-Up an der Gegner-Position spawnen."""
-        if random.random() < settings.POWERUP_DROP_CHANCE:
-            powerup = PowerUp(x, y)
-            self.powerups.add(powerup)
-            self.all_sprites.add(powerup)
+        if random.random() >= settings.POWERUP_DROP_CHANCE:
+            return
+
+        if random.random() < settings.POWERUP_DRONE_CHANCE:
+            powerup_type = PowerUpType.DRONE
+        else:
+            powerup_type = PowerUpType.LASER
+
+        powerup = PowerUp(x, y, powerup_type)
+        self.powerups.add(powerup)
+        self.all_sprites.add(powerup)
 
     def _handle_collisions(self) -> None:
         """Kollisionen zwischen Projektilen, Gegnern, Power-Ups und Spieler prüfen."""
         # Spieler-Projektil trifft Gegner
         hits = pygame.sprite.groupcollide(self.bullets, self.enemies, True, False)
-        for _bullet, enemy_list in hits.items():
+        for bullet, enemy_list in hits.items():
             for enemy in enemy_list:
                 cx, cy = enemy.rect.centerx, enemy.rect.centery
                 enemy.kill()
-                self.score += settings.SCORE_PER_HIT
+                if getattr(bullet, "weak", False):
+                    self.score += settings.DRONE_SCORE_PER_HIT
+                else:
+                    self.score += settings.SCORE_PER_HIT
                 self._try_drop_powerup(cx, cy)
 
-        # Power-Up einsammeln — Laser-Stufe erhöhen
+        # Power-Ups einsammeln
         collected = pygame.sprite.spritecollide(self.player, self.powerups, True)
-        for _ in collected:
-            self.player.upgrade_laser()
+        for powerup in collected:
+            if powerup.powerup_type == PowerUpType.DRONE:
+                self.player.add_drone()
+            else:
+                self.player.upgrade_laser()
 
         if not self.player.is_invincible:
             # Gegner rammt Spieler
@@ -162,9 +175,15 @@ class Game:
             True,
             settings.COLOR_POWERUP,
         )
+        drone_text = self.font.render(
+            f"Drohnen: {len(self.player.drones)}/{settings.MAX_DRONES}",
+            True,
+            settings.COLOR_DRONE,
+        )
         self.screen.blit(score_text, (10, 10))
         laser_rect = laser_text.get_rect(center=(settings.SCREEN_WIDTH // 2, 22))
         self.screen.blit(laser_text, laser_rect)
+        self.screen.blit(drone_text, (10, 36))
         self.screen.blit(
             lives_text,
             (settings.SCREEN_WIDTH - lives_text.get_width() - 10, 10),

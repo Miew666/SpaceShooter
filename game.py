@@ -8,6 +8,7 @@ import settings
 from assets import Assets
 from enemy import ENEMY_TYPES
 from player import Player
+from particle import spawn_explosion
 from powerup import PowerUp, PowerUpType
 from starfield import Starfield
 
@@ -35,6 +36,7 @@ class Game:
         self.bullets = pygame.sprite.Group()
         self.enemy_lasers = pygame.sprite.Group()
         self.powerups = pygame.sprite.Group()
+        self.particles = pygame.sprite.Group()
         self.enemies = pygame.sprite.Group()
         self.all_sprites = pygame.sprite.Group()
 
@@ -93,6 +95,12 @@ class Game:
         self.powerups.add(powerup)
         self.all_sprites.add(powerup)
 
+    def _destroy_enemy(self, enemy: pygame.sprite.Sprite) -> None:
+        """Gegner zerstören und Partikel-Explosion an seiner Position auslösen."""
+        cx, cy = enemy.rect.centerx, enemy.rect.centery
+        spawn_explosion(cx, cy, self.particles)
+        enemy.kill()
+
     def _handle_collisions(self) -> None:
         """Kollisionen zwischen Projektilen, Gegnern, Power-Ups und Spieler prüfen."""
         # Spieler-Projektil trifft Gegner
@@ -100,7 +108,7 @@ class Game:
         for bullet, enemy_list in hits.items():
             for enemy in enemy_list:
                 cx, cy = enemy.rect.centerx, enemy.rect.centery
-                enemy.kill()
+                self._destroy_enemy(enemy)
                 if getattr(bullet, "weak", False):
                     self.score += settings.DRONE_SCORE_PER_HIT
                 else:
@@ -123,7 +131,7 @@ class Game:
             if colliding:
                 self._hit_player()
                 for enemy in colliding:
-                    enemy.kill()
+                    self._destroy_enemy(enemy)
 
         if not self.player.is_invincible:
             # Gegner-Schuss trifft Spieler
@@ -149,6 +157,7 @@ class Game:
         self.bullets.update()
         self.enemies.update()
         self.powerups.update()
+        self.particles.update()
 
         # Gegner schießen lassen (jeder Typ mit eigenem Verhalten)
         for enemy in self.enemies:
@@ -202,6 +211,7 @@ class Game:
         self.screen.fill(settings.COLOR_BLACK)
         self.starfield.draw(self.screen)
         self.all_sprites.draw(self.screen)
+        self.particles.draw(self.screen)
         self.player.draw(self.screen)
         self._draw_ui()
         if self.game_over:

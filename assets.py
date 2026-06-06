@@ -63,6 +63,9 @@ class Assets:
     # Power-Ups
     powerup_laser: pygame.Surface
     powerup_drone: pygame.Surface
+    powerup_shield: pygame.Surface
+    powerup_bomb: pygame.Surface
+    powerup_magnet: pygame.Surface
 
     # Drohnen
     drone_ship: pygame.Surface
@@ -140,6 +143,18 @@ class Assets:
         # Drohnen-Power-Up (gelbes Stern-Symbol)
         cls.powerup_drone = _load_sprite(
             "Power-ups/powerupYellow_star.png", powerup_size, settings.COLOR_DRONE
+        )
+
+        cls.powerup_shield = _load_sprite(
+            "Power-ups/powerupBlue_shield.png", powerup_size, settings.COLOR_SHIELD_RING
+        )
+
+        cls.powerup_bomb = _load_sprite(
+            "Power-ups/powerupRed.png", powerup_size, settings.COLOR_BOMB
+        )
+
+        cls.powerup_magnet = _load_sprite(
+            "Power-ups/star_gold.png", powerup_size, settings.COLOR_MAGNET
         )
 
         # Mini-Drohne (kleines UFO)

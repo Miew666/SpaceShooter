@@ -19,6 +19,8 @@ class Player(pygame.sprite.Sprite):
         )
         self.laser_level = 1
         self.drones: list[Drone] = []
+        self.shield_active = False
+        self.magnet_active_until = 0
         self._last_shot = 0
         self.invincible_until = 0
         self._blink_visible = True
@@ -33,6 +35,21 @@ class Player(pygame.sprite.Sprite):
         """Kurze Unverwundbarkeit nach Treffer aktivieren."""
         ms = duration_ms if duration_ms is not None else settings.INVINCIBILITY_MS
         self.invincible_until = pygame.time.get_ticks() + ms
+
+    @property
+    def magnet_active(self) -> bool:
+        """True, solange der Magnet-Modus läuft."""
+        return pygame.time.get_ticks() < self.magnet_active_until
+
+    def activate_shield(self) -> None:
+        """Schutzschild aktivieren — fängt den nächsten Treffer ab."""
+        self.shield_active = True
+
+    def activate_magnet(self) -> None:
+        """Magnet-Modus für die konfigurierte Dauer aktivieren."""
+        self.magnet_active_until = (
+            pygame.time.get_ticks() + settings.MAGNET_DURATION_MS
+        )
 
     def upgrade_laser(self) -> None:
         """Laser-Stufe um 1 erhöhen (maximal Stufe 5)."""
@@ -131,8 +148,19 @@ class Player(pygame.sprite.Sprite):
         return bullets
 
     def draw(self, surface: pygame.Surface) -> None:
-        """Drohnen und Spieler zeichnen (Blink-Effekt nur für den Spieler)."""
+        """Drohnen, Schild-Kreis und Spieler zeichnen."""
         for drone in self.drones:
             surface.blit(drone.image, drone.rect)
+
+        if self.shield_active:
+            shield_radius = max(self.rect.width, self.rect.height) // 2 + 8
+            pygame.draw.circle(
+                surface,
+                settings.COLOR_SHIELD_RING,
+                self.rect.center,
+                shield_radius,
+                2,
+            )
+
         if self._blink_visible:
             surface.blit(self.image, self.rect)

@@ -81,19 +81,61 @@ class Game:
         else:
             self._damage_player()
 
+    def _try_shield_block(self) -> bool:
+        """Schutzschild verbrauchen und Treffer abfangen."""
+        if self.player.shield_active:
+            self.player.shield_active = False
+            return True
+        return False
+
+    def _pick_powerup_type(self) -> str:
+        """Zufälligen Power-Up-Typ gemäß Gewichtung wählen."""
+        roll = random.random()
+        thresholds = [
+            (PowerUpType.LASER, settings.POWERUP_WEIGHT_LASER),
+            (PowerUpType.DRONE, settings.POWERUP_WEIGHT_DRONE),
+            (PowerUpType.SHIELD, settings.POWERUP_WEIGHT_SHIELD),
+            (PowerUpType.BOMB, settings.POWERUP_WEIGHT_BOMB),
+            (PowerUpType.MAGNET, settings.POWERUP_WEIGHT_MAGNET),
+        ]
+        cumulative = 0.0
+        for powerup_type, weight in thresholds:
+            cumulative += weight
+            if roll <= cumulative:
+                return powerup_type
+        return PowerUpType.LASER
+
     def _try_drop_powerup(self, x: int, y: int) -> None:
-        """Mit 20 % Chance ein Power-Up an der Gegner-Position spawnen."""
+        """Mit konfigurierter Chance ein Power-Up spawnen (~5 % pro Typ im Mittel)."""
         if random.random() >= settings.POWERUP_DROP_CHANCE:
             return
 
-        if random.random() < settings.POWERUP_DRONE_CHANCE:
-            powerup_type = PowerUpType.DRONE
-        else:
-            powerup_type = PowerUpType.LASER
-
-        powerup = PowerUp(x, y, powerup_type)
+        powerup = PowerUp(x, y, self._pick_powerup_type())
         self.powerups.add(powerup)
         self.all_sprites.add(powerup)
+
+    def _apply_powerup(self, powerup: PowerUp) -> None:
+        """Effekt des eingesammelten Power-Ups auslösen."""
+        if powerup.type == PowerUpType.DRONE:
+            self.player.add_drone()
+        elif powerup.type == PowerUpType.SHIELD:
+            self.player.activate_shield()
+        elif powerup.type == PowerUpType.BOMB:
+            self._activate_smart_bomb()
+        elif powerup.type == PowerUpType.MAGNET:
+            self.player.activate_magnet()
+        else:
+            self.player.upgrade_laser()
+
+    def _activate_smart_bomb(self) -> None:
+        """Alle Gegner und gegnerischen Projektile auf dem Bildschirm zerstören."""
+        for enemy in list(self.enemies):
+            cx, cy = enemy.rect.centerx, enemy.rect.centery
+            self._destroy_enemy(enemy)
+            self.score += settings.SCORE_PER_HIT
+
+        for laser in list(self.enemy_lasers):
+            laser.kill()
 
     def _destroy_enemy(self, enemy: pygame.sprite.Sprite) -> None:
         """Gegner zerstören und Partikel-Explosion an seiner Position auslösen."""
@@ -118,10 +160,7 @@ class Game:
         # Power-Ups einsammeln
         collected = pygame.sprite.spritecollide(self.player, self.powerups, True)
         for powerup in collected:
-            if powerup.powerup_type == PowerUpType.DRONE:
-                self.player.add_drone()
-            else:
-                self.player.upgrade_laser()
+            self._apply_powerup(powerup)
 
         if not self.player.is_invincible:
             # Gegner rammt Spieler
@@ -129,9 +168,13 @@ class Game:
                 self.player, self.enemies, False
             )
             if colliding:
-                self._hit_player()
-                for enemy in colliding:
-                    self._destroy_enemy(enemy)
+                if self._try_shield_block():
+                    for enemy in colliding:
+                        self._destroy_enemy(enemy)
+                else:
+                    self._hit_player()
+                    for enemy in colliding:
+                        self._destroy_enemy(enemy)
 
         if not self.player.is_invincible:
             # Gegner-Schuss trifft Spieler
@@ -139,7 +182,8 @@ class Game:
                 self.player, self.enemy_lasers, True
             )
             if laser_hits:
-                self._hit_player()
+                if not self._try_shield_block():
+                    self._hit_player()
 
     def _update(self) -> None:
         """Spielzustand pro Frame aktualisieren."""
@@ -156,7 +200,8 @@ class Game:
 
         self.bullets.update()
         self.enemies.update()
-        self.powerups.update()
+        for powerup in self.powerups:
+            powerup.update(self.player, self.player.magnet_active)
         self.particles.update()
 
         # Gegner schießen lassen (jeder Typ mit eigenem Verhalten)
@@ -189,10 +234,22 @@ class Game:
             True,
             settings.COLOR_DRONE,
         )
+        status_parts = []
+        if self.player.shield_active:
+            status_parts.append("Schild")
+        if self.player.magnet_active:
+            status_parts.append("Magnet")
+        status_text = self.font.render(
+            " | ".join(status_parts) if status_parts else "",
+            True,
+            settings.COLOR_WHITE,
+        )
         self.screen.blit(score_text, (10, 10))
         laser_rect = laser_text.get_rect(center=(settings.SCREEN_WIDTH // 2, 22))
         self.screen.blit(laser_text, laser_rect)
         self.screen.blit(drone_text, (10, 36))
+        if status_parts:
+            self.screen.blit(status_text, (10, 58))
         self.screen.blit(
             lives_text,
             (settings.SCREEN_WIDTH - lives_text.get_width() - 10, 10),

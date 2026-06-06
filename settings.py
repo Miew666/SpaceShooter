@@ -1,6 +1,6 @@
 """Zentrale Spielkonstanten — hier Balance-Werte anpassen, ohne Game-Logik zu ändern."""
 
-# Fenster
+# Fenster — virtuelle Spielfeld-Auflösung (Vollbild skaliert diese Surface)
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60

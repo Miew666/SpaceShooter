@@ -18,10 +18,22 @@ class Game:
 
     def __init__(self):
         pygame.init()
+        pygame.display.set_caption("Space Shooter")
+
+        display_info = pygame.display.Info()
+        self.native_width = display_info.current_w
+        self.native_height = display_info.current_h
         self.screen = pygame.display.set_mode(
+            (self.native_width, self.native_height),
+            pygame.FULLSCREEN,
+        )
+
+        # Virtuelle Spielfläche — Logik bleibt bei fester Auflösung
+        self.game_surface = pygame.Surface(
             (settings.SCREEN_WIDTH, settings.SCREEN_HEIGHT)
         )
-        pygame.display.set_caption("Space Shooter")
+        self._compute_display_rect()
+
         Assets.load()
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont(None, 28)
@@ -29,6 +41,20 @@ class Game:
 
         self.starfield = Starfield()
         self._reset_state()
+
+    def _compute_display_rect(self) -> None:
+        """Skaliertes Ziel-Rechteck berechnen — Seitenverhältnis bleibt erhalten."""
+        scale = min(
+            self.native_width / settings.SCREEN_WIDTH,
+            self.native_height / settings.SCREEN_HEIGHT,
+        )
+        scaled_width = int(settings.SCREEN_WIDTH * scale)
+        scaled_height = int(settings.SCREEN_HEIGHT * scale)
+        offset_x = (self.native_width - scaled_width) // 2
+        offset_y = (self.native_height - scaled_height) // 2
+        self.display_rect = pygame.Rect(
+            offset_x, offset_y, scaled_width, scaled_height
+        )
 
     def _reset_state(self) -> None:
         """Spielzustand für Neustart zurücksetzen."""
@@ -62,6 +88,8 @@ class Game:
             if event.type == pygame.QUIT:
                 return False
             if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return False
                 if event.key == pygame.K_r and self.game_over:
                     self._reset_state()
         return True
@@ -244,13 +272,13 @@ class Game:
             True,
             settings.COLOR_WHITE,
         )
-        self.screen.blit(score_text, (10, 10))
+        self.game_surface.blit(score_text, (10, 10))
         laser_rect = laser_text.get_rect(center=(settings.SCREEN_WIDTH // 2, 22))
-        self.screen.blit(laser_text, laser_rect)
-        self.screen.blit(drone_text, (10, 36))
+        self.game_surface.blit(laser_text, laser_rect)
+        self.game_surface.blit(drone_text, (10, 36))
         if status_parts:
-            self.screen.blit(status_text, (10, 58))
-        self.screen.blit(
+            self.game_surface.blit(status_text, (10, 58))
+        self.game_surface.blit(
             lives_text,
             (settings.SCREEN_WIDTH - lives_text.get_width() - 10, 10),
         )
@@ -261,18 +289,24 @@ class Game:
             "Game Over - Drücke R für Neustart", True, settings.COLOR_WHITE
         )
         rect = text.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2))
-        self.screen.blit(text, rect)
+        self.game_surface.blit(text, rect)
 
     def _draw(self) -> None:
-        """Alles auf den Bildschirm zeichnen."""
-        self.screen.fill(settings.COLOR_BLACK)
-        self.starfield.draw(self.screen)
-        self.all_sprites.draw(self.screen)
-        self.particles.draw(self.screen)
-        self.player.draw(self.screen)
+        """Spiel auf virtuelle Surface zeichnen und skaliert auf Vollbild blitten."""
+        self.game_surface.fill(settings.COLOR_BLACK)
+        self.starfield.draw(self.game_surface)
+        self.all_sprites.draw(self.game_surface)
+        self.particles.draw(self.game_surface)
+        self.player.draw(self.game_surface)
         self._draw_ui()
         if self.game_over:
             self._draw_game_over()
+
+        self.screen.fill(settings.COLOR_BLACK)
+        scaled_surface = pygame.transform.scale(
+            self.game_surface, self.display_rect.size
+        )
+        self.screen.blit(scaled_surface, self.display_rect.topleft)
         pygame.display.flip()
 
     def run(self) -> None:

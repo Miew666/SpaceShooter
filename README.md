@@ -47,10 +47,10 @@ Browser-Vorschau:
 
 ```sh
 python -m pip install -r requirements-web.txt
-mkdir -p .webapp
-cp *.py .webapp/
-cp -R graphics .webapp/
-python -m pygbag --template web/mobile.tmpl --title "Space Shooter" .webapp
+mkdir -p webapp
+cp *.py webapp/
+cp -R graphics webapp/
+python -m pygbag --template web/mobile.tmpl --title "Space Shooter" webapp
 ```
 
 Dann http://localhost:8000 öffnen. Auf einem Handy einen vom Rechner

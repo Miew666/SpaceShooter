@@ -1,0 +1,57 @@
+name: Mobile browser build
+on:
+  push:
+    branches: [main, mobile-browser]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-web.txt
+      - name: Test controls and desktop rendering
+        env:
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: python -m unittest discover -s tests -v
+      - name: Stage game and build browser version
+        run: |
+          mkdir -p webapp
+          cp *.py webapp/
+          cp -R graphics webapp/
+          python -m pygbag --build --template web/mobile.tmpl --title "Space Shooter" webapp
+          test -s webapp/build/web/index.html
+          test -s webapp/build/web/webapp.apk
+      - name: Test mobile browser startup
+        run: |
+          python -m pip install playwright==1.55.0
+          python -m playwright install --with-deps chromium
+          python tests/browser_smoke.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-browser
+          path: webapp/build/web
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: webapp/build/web
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment

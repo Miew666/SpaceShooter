@@ -1,11 +1,11 @@
-"""Einstiegspunkt für Space Shooter."""
-
+"""Einstiegspunkt für Desktop und pygbag/WebAssembly."""
+import asyncio
 from game import Game
 
 
-def main():
-    Game().run()
+async def main():
+    await Game().run()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -1,6 +1,8 @@
 """Zentrale Spielklasse — Schleife, Spawning, Kollisionen und UI."""
 
+import asyncio
 import random
+import sys
 
 import pygame
 
@@ -20,12 +22,15 @@ class Game:
         pygame.init()
         pygame.display.set_caption("Space Shooter")
 
+        self.web = sys.platform == "emscripten"
         display_info = pygame.display.Info()
         self.native_width = display_info.current_w
         self.native_height = display_info.current_h
+        if self.web:
+            self.native_width, self.native_height = 800, 600
         self.screen = pygame.display.set_mode(
             (self.native_width, self.native_height),
-            pygame.FULLSCREEN,
+            pygame.RESIZABLE if self.web else pygame.FULLSCREEN,
         )
 
         # Virtuelle Spielfläche — Logik bleibt bei fester Auflösung
@@ -69,6 +74,10 @@ class Game:
         self.score = 0
         self.lives = settings.STARTING_LIVES
         self.game_over = False
+        self.paused = self.web
+        self.touch_id = None
+        self.touch_position = None
+        self.touch_delta = [0.0, 0.0]
         self._last_spawn = pygame.time.get_ticks()
 
         # Start-Horde sofort spawnen
@@ -82,16 +91,83 @@ class Game:
             self.enemies.add(enemy)
             self.all_sprites.add(enemy)
 
+    def _clear_touch(self) -> None:
+        self.touch_id = None
+        self.touch_position = None
+        self.touch_delta = [0.0, 0.0]
+
+    def _pointer_down(self, pointer_id, position) -> None:
+        if not self.display_rect.collidepoint(position):
+            return
+        x = (position[0] - self.display_rect.x) * settings.SCREEN_WIDTH / self.display_rect.width
+        y = (position[1] - self.display_rect.y) * settings.SCREEN_HEIGHT / self.display_rect.height
+        if self.game_over:
+            self._reset_state()
+            self.paused = False
+            return
+        if self.paused:
+            self.paused = False
+            self._last_spawn = pygame.time.get_ticks()
+            self._clear_touch()
+            return
+        if pygame.Rect(680, 42, 110, 56).collidepoint(x, y):
+            self.paused = True
+            self._clear_touch()
+            return
+        if self.touch_id is None:
+            self.touch_id = pointer_id
+            self.touch_position = position
+
+    def _pointer_move(self, pointer_id, position) -> None:
+        if pointer_id != self.touch_id or self.touch_position is None:
+            return
+        self.touch_delta[0] += (position[0] - self.touch_position[0]) * settings.SCREEN_WIDTH / self.display_rect.width
+        self.touch_delta[1] += (position[1] - self.touch_position[1]) * settings.SCREEN_HEIGHT / self.display_rect.height
+        self.touch_position = position
+
     def _handle_events(self) -> bool:
-        """Tastatur- und Fenster-Events verarbeiten. False = Spiel beenden."""
+        """Touch, Maus, Tastatur und Größenänderungen verarbeiten."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return False
-            if event.type == pygame.KEYDOWN:
+            if event.type == pygame.VIDEORESIZE:
+                self.native_width, self.native_height = max(1, event.w), max(1, event.h)
+                self.screen = pygame.display.set_mode(
+                    (self.native_width, self.native_height), pygame.RESIZABLE
+                )
+                self._compute_display_rect()
+                self._clear_touch()
+            elif event.type == pygame.WINDOWFOCUSLOST:
+                self.paused = True
+                self._clear_touch()
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return False
-                if event.key == pygame.K_r and self.game_over:
+                    if not self.web:
+                        return False
+                    self.paused = True
+                    self._clear_touch()
+                elif event.key == pygame.K_r and self.game_over:
                     self._reset_state()
+                    self.paused = False
+                elif event.key in (pygame.K_p, pygame.K_RETURN):
+                    self.paused = not self.paused
+                    self._clear_touch()
+            elif event.type in (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP):
+                position = (event.x * self.native_width, event.y * self.native_height)
+                if event.type == pygame.FINGERDOWN:
+                    self._pointer_down(event.finger_id, position)
+                elif event.type == pygame.FINGERMOTION:
+                    self._pointer_move(event.finger_id, position)
+                elif event.finger_id == self.touch_id:
+                    self._clear_touch()
+            elif not getattr(event, "touch", False):
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    self._pointer_down("mouse", event.pos)
+                elif event.type == pygame.MOUSEMOTION:
+                    self._pointer_move("mouse", event.pos)
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    if self.touch_id == "mouse":
+                        self._clear_touch()
         return True
 
     def _damage_player(self) -> None:
@@ -215,13 +291,15 @@ class Game:
 
     def _update(self) -> None:
         """Spielzustand pro Frame aktualisieren."""
-        if self.game_over:
+        if self.game_over or self.paused:
             return
 
         keys = pygame.key.get_pressed()
-        self.player.update(keys)
+        movement = tuple(self.touch_delta)
+        self.touch_delta = [0.0, 0.0]
+        self.player.update(keys, movement)
 
-        if keys[pygame.K_SPACE]:
+        if keys[pygame.K_SPACE] or self.touch_id is not None:
             new_bullets = self.player.shoot(self.bullets)
             for bullet in new_bullets:
                 self.all_sprites.add(bullet)
@@ -286,7 +364,7 @@ class Game:
     def _draw_game_over(self) -> None:
         """Game-Over-Hinweis zentriert anzeigen."""
         text = self.font_large.render(
-            "Game Over - Drücke R für Neustart", True, settings.COLOR_WHITE
+            "Game Over - Tippen oder R", True, settings.COLOR_WHITE
         )
         rect = text.get_rect(center=(settings.SCREEN_WIDTH // 2, settings.SCREEN_HEIGHT // 2))
         self.game_surface.blit(text, rect)
@@ -301,6 +379,21 @@ class Game:
         self._draw_ui()
         if self.game_over:
             self._draw_game_over()
+        elif self.paused:
+            shade = pygame.Surface(self.game_surface.get_size(), pygame.SRCALPHA)
+            shade.fill((0, 0, 0, 200))
+            self.game_surface.blit(shade, (0, 0))
+            for label, y in [
+                ("Space Shooter - Tippen zum Spielen", 240),
+                ("Finger ziehen: bewegen + feuern", 290),
+                ("Pause: oben rechts | Tastatur: Pfeile, Leertaste, P", 330),
+            ]:
+                text = self.font.render(label, True, settings.COLOR_WHITE)
+                self.game_surface.blit(text, text.get_rect(center=(400, y)))
+        else:
+            pygame.draw.rect(self.game_surface, (30, 50, 80), (680, 42, 110, 56), border_radius=8)
+            text = self.font.render("Pause", True, settings.COLOR_WHITE)
+            self.game_surface.blit(text, text.get_rect(center=(735, 70)))
 
         self.screen.fill(settings.COLOR_BLACK)
         scaled_surface = pygame.transform.scale(
@@ -309,12 +402,18 @@ class Game:
         self.screen.blit(scaled_surface, self.display_rect.topleft)
         pygame.display.flip()
 
-    def run(self) -> None:
+    async def run(self) -> None:
         """Hauptspielschleife starten."""
         running = True
         while running:
+            frame_start = pygame.time.get_ticks()
             running = self._handle_events()
             self._update()
             self._draw()
-            self.clock.tick(settings.FPS)
+            if self.web:
+                elapsed = (pygame.time.get_ticks() - frame_start) / 1000
+                await asyncio.sleep(max(0, 1 / settings.FPS - elapsed))
+            else:
+                self.clock.tick(settings.FPS)
+                await asyncio.sleep(0)
         pygame.quit()

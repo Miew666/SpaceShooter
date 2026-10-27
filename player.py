@@ -103,7 +103,7 @@ class Player(pygame.sprite.Sprite):
         # Stufe 5: breiter Plasmastrahl
         return [Bullet.plasma_beam(cx, top)]
 
-    def update(self, keys: pygame.key.ScancodeWrapper) -> None:
+    def update(self, keys: pygame.key.ScancodeWrapper, movement=(0, 0)) -> None:
         """Bewegung per Pfeiltasten; Position an Bildschirmränder clampen."""
         if keys[pygame.K_LEFT]:
             self.rect.x -= settings.PLAYER_SPEED
@@ -114,6 +114,7 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_DOWN]:
             self.rect.y += settings.PLAYER_SPEED
 
+        self.rect.move_ip(round(movement[0]), round(movement[1]))
         self.rect.left = max(0, self.rect.left)
         self.rect.right = min(settings.SCREEN_WIDTH, self.rect.right)
         self.rect.top = max(0, self.rect.top)

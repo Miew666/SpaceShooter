@@ -27,13 +27,13 @@ try:
         try:
             page.goto("http://127.0.0.1:8000", wait_until="domcontentloaded")
             # The runtime deliberately waits for a user gesture.
+            page.wait_for_function("() => window.MM && window.MM.UME !== undefined", timeout=180000)
             page.touchscreen.tap(195, 420)
             page.wait_for_function(
                 """() => {
                     const canvas = document.querySelector('#canvas');
-                    const info = document.querySelector('#infobox');
-                    return canvas && canvas.width >= 300 && info &&
-                        getComputedStyle(info).display === 'none';
+                    return canvas && canvas.width >= 300 &&
+                        canvas.getAttribute('aria-label') === 'Space Shooter Spielfeld';
                 }""",
                 timeout=180000,
             )

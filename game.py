@@ -3,6 +3,7 @@
 import asyncio
 import random
 import sys
+import platform
 
 import pygame
 
@@ -401,6 +402,8 @@ class Game:
         )
         self.screen.blit(scaled_surface, self.display_rect.topleft)
         pygame.display.flip()
+        if self.web and hasattr(platform, "window"):
+            platform.window.canvas.setAttribute("aria-label", "Space Shooter Spielfeld")
 
     async def run(self) -> None:
         """Hauptspielschleife starten."""
